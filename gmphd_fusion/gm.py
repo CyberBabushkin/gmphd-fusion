@@ -12,15 +12,16 @@ class Gaussian:
 
     # An auto-generated label, incremented
     _next_label: int = 0
+    BIRTH_LABEL: int = -1
 
     def __init__(self, mean: StateVector, cov: CovarianceMatrix, label: int | None = None):
+        """Label -1 should be used for birth components."""
         self.mean = StateVector(mean)
         self.cov = CovarianceMatrix(cov)
 
         if self.mean.shape[0] != self.cov.shape[0]:
             raise ValueError("Shapes of mean and cov mismatch.")
 
-        # TODO: labels should include None and birth
         if label is None:
             self.label = self._allocate_new_label()
         else:
