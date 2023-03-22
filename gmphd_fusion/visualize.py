@@ -90,7 +90,7 @@ def _visualize_estimates(
 ) -> None:
     if not estimates:
         return
-    estimates = np.hstack(estimates)
+    estimates = np.hstack([e for e in estimates if e is not None])
     x = estimates[0, :]
     y = estimates[1, :]
     axis.scatter(x, y, color=_rand_rgb_color(), marker="o", label="Estimates", s=10, alpha=0.8)

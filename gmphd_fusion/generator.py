@@ -3,7 +3,7 @@ from scipy.stats import multivariate_normal, poisson
 
 from .data import StateVector, StateVectors
 from .measurement_model import MeasurementModel
-from .motion_models import LinearMotionModel
+from .motion_models import LinearMotionModel, ConstantVelocityMotionModel
 
 
 def generate_trajectory(
@@ -23,6 +23,24 @@ def generate_trajectory(
         trajectory[:, i] = x.flatten()
 
     return StateVectors(trajectory)
+
+
+def generate_paper_trajectories() -> list[StateVectors]:
+    def _clean_trajectory(x0, n, st_matrix):
+        trajectory = np.zeros((x0.shape[0], n))
+        x = x0
+        for i in range(n):
+            x = st_matrix @ x
+            trajectory[:, i] = x.flatten()
+        return StateVectors(trajectory)
+
+    nsamples = 100
+    x0_t1 = StateVector([250., 250., 2.5, -12.0])
+    x0_t2 = StateVector([-250., -250., 12, -2.5])
+    motion_model = ConstantVelocityMotionModel(0.0)
+    trajectory_t1 = _clean_trajectory(x0_t1, nsamples, motion_model.state_transition_matrix(1.0))
+    trajectory_t2 = _clean_trajectory(x0_t2, nsamples, motion_model.state_transition_matrix(1.0))
+    return [trajectory_t1, trajectory_t2]
 
 
 def generate_measurements(
