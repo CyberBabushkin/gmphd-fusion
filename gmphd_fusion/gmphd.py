@@ -78,12 +78,12 @@ class GMPHD:
         for gaussian, weight in self.posterior:
             mean_predict, cov_predict = self.filter.predict(gaussian.mean, gaussian.cov, self.motion_model, dt=dt)
             weight_predict = weight * self.survival_prob
-            predict_gaussian = Gaussian(mean_predict, cov_predict)
+            predict_gaussian = Gaussian(mean_predict, cov_predict, label=gaussian.label)
             mixture_predict.add_to_mixture(predict_gaussian, weight_predict)
         return mixture_predict
 
     def _predict_birth(self):
-        return self.birth_gm.copy()
+        return self.birth_gm.copy(with_labels=False)
 
     def _update(self, measurements: StateVectors):
         hypotheses = [self._create_misdetection_hypotheses()]
