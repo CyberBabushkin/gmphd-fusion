@@ -48,9 +48,7 @@ def visualize_mixture(
 
 
 def _rand_rgb_color() -> np.ndarray:
-    return np.random.rand(
-        3,
-    )
+    return np.random.rand(3)
 
 
 def _visualize_ground_truth(
@@ -61,7 +59,9 @@ def _visualize_ground_truth(
         vector_estimates = np.hstack(t.estimates)
         x = vector_estimates[0, :]
         y = vector_estimates[1, :]
-        axis.plot(x, y, color="b", marker="|", linestyle="-", label=f"Ground truth", markersize=1, linewidth=1, alpha=0.8)
+        axis.plot(
+            x, y, color="b", marker="|", linestyle="-", label=f"Ground truth", markersize=1, linewidth=1, alpha=0.8
+        )
 
 
 def _visualize_tracks(
@@ -73,20 +73,13 @@ def _visualize_tracks(
         x = vector_estimates[0, :]
         y = vector_estimates[1, :]
         axis.plot(
-            x,
-            y,
-            color=_rand_rgb_color(),
-            marker="o",
-            markersize=1,
-            linestyle="-",
-            label=f"Track {t.label}",
-            alpha=0.8
+            x, y, color=_rand_rgb_color(), marker="o", markersize=1, linestyle="-", label=f"Track {t.label}", alpha=0.8
         )
 
 
 def _visualize_estimates(
-        axis: plt.Axes,
-        estimates: list[np.ndarray],
+    axis: plt.Axes,
+    estimates: list[np.ndarray],
 ) -> None:
     if not estimates:
         return
@@ -120,10 +113,10 @@ def _visualize_clutter(
 
 def visualize_trajectories(
     axis: plt.Axes,
-    ground_truth: list[Track],
-    estimates: list[Track] | list[np.ndarray],
-    measurements: np.ndarray,
-    clutter: np.ndarray,
+    ground_truth: list[Track] | None,
+    estimates: list[Track] | list[np.ndarray] | None,
+    measurements: np.ndarray | None,
+    clutter: np.ndarray | None,
     time: int,
 ) -> None:
     """2D only.
@@ -131,13 +124,17 @@ def visualize_trajectories(
     Clutter and measurements should be a list of matrices of size (2, n) where n is the
     number of clutter/measurements points at time step k."""
 
-    _visualize_clutter(axis, clutter)
-    _visualize_ground_truth(axis, ground_truth)
-    _visualize_measurements(axis, measurements)
-    if estimates and isinstance(estimates[0], np.ndarray):
-        _visualize_estimates(axis, estimates)
-    else:
-        _visualize_tracks(axis, estimates)
+    if clutter is not None:
+        _visualize_clutter(axis, clutter)
+    if ground_truth is not None:
+        _visualize_ground_truth(axis, ground_truth)
+    if measurements is not None:
+        _visualize_measurements(axis, measurements)
+    if estimates is not None:
+        if estimates and isinstance(estimates[0], np.ndarray):
+            _visualize_estimates(axis, estimates)
+        else:
+            _visualize_tracks(axis, estimates)
 
     axis.set_title(f"Time = {time}")
     # axis.legend()
