@@ -2,6 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
+from gmphd_fusion.data import StateVector, StateVectors
 from gmphd_fusion.metrics import cpep, eae_targets_number
 
 
@@ -18,10 +19,10 @@ class TestMetrics(TestCase):
 
         state_matrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0]])
         radius = 2
-        true_targets = np.array([[i, i, 5, 5] for i in range(1, 6)])
-        true_states = np.array([state_matrix @ tt for tt in true_targets])
-        measured_targets = np.array([[i / 10, i * 10, 7, 7] for i in range(1, 6)])
-        measured_states = np.array([state_matrix @ mt for mt in measured_targets])
+        true_targets = StateVectors([StateVector([i, i, 5, 5]) for i in range(1, 6)])
+        true_states = StateVectors(state_matrix @ true_targets)
+        measured_targets = StateVectors([StateVector([i / 10, i * 10, 7, 7]) for i in range(1, 6)])
+        measured_states = StateVectors(state_matrix @ measured_targets)
 
         probs = [_prob(measured_states, tt, radius) for tt in true_states]
         cpep_exp = sum(probs) / len(probs)
