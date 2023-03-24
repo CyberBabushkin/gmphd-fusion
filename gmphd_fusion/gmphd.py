@@ -204,7 +204,7 @@ class GMPHD:
     def _add_track_estimates(self, detected_states: dict[int, StateVector]) -> None:
         for label, state in detected_states.items():
             if label not in self.tracks:
-                self.tracks[label] = Track(label, start_time=self.timestamp)
+                self.tracks[label] = Track(label)
             track = self.tracks[label]
             track.add_estimate(state, self.timestamp)
 
@@ -218,11 +218,3 @@ class GMPHD:
                 track.finish(self.timestamp)
             del self.tracks[label]
             self.finished_tracks[label] = track
-
-    # def _update_track_missed_detection(self, detected_states: dict[int, np.ndarray]) -> None:
-    #     return  # TODO: this was moved to the Track class
-    #     detected_labels = set(detected_states.keys())
-    #     track_labels = set(self.tracks.keys())
-    #     missed_labels = track_labels.difference(detected_labels)
-    #     for label in missed_labels:
-    #         self.tracks[label].add_estimate(None)

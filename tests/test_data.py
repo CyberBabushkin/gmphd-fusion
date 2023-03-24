@@ -8,34 +8,38 @@ from gmphd_fusion.data import Track, StateVector, StateVectors
 class TestTrack(TestCase):
     def setUp(self) -> None:
         self.time = 10
-        self.track = Track(label=1, start_time=self.time)
+        self.state_dim = 2
+        self.dummy_estimate = StateVector([1, 1])
+        self.track = Track(label=1)
 
     def test_add_estimate(self):
-        estimate = np.array([[1], [1]])
-        self.track.add_estimate(estimate, self.time)
+        self.track.add_estimate(self.dummy_estimate, self.time)
         with self.assertRaises(ValueError):
-            self.track.add_estimate(estimate, self.time)
+            self.track.add_estimate(self.dummy_estimate, self.time)
 
         self.time += 1
-        self.track.add_estimate(estimate, self.time)
+        self.track.add_estimate(self.dummy_estimate, self.time)
 
         self.time += 3
-        self.track.add_estimate(estimate, self.time)
-
-        self.assertEqual(self.track.estimates, [estimate, estimate, None, None, estimate])
+        self.track.add_estimate(self.dummy_estimate, self.time)
+        self.assertTrue(
+            self.track.estimates, [self.dummy_estimate, self.dummy_estimate, None, None, self.dummy_estimate]
+        )
 
     def test_finish(self):
         self.assertEqual(self.track.is_finished(), False)
+        with self.assertRaises(ValueError):
+            self.track.finish(self.time)
+        self.track.add_estimate(self.dummy_estimate, self.time)
         self.time += 3
         self.track.finish(self.time)
         self.assertEqual(self.track.is_finished(), True)
-        self.assertEqual(self.track.estimates, [None, None, None])
+        self.assertEqual(self.track.estimates, [self.dummy_estimate, None, None])
         with self.assertRaises(ValueError):
             self.track.finish(self.time)
 
 
 class TestStateVectors(TestCase):
-
     def setUp(self) -> None:
         self.nvec = 100
         self.svs = StateVectors([StateVector([i, i, i]) for i in range(self.nvec)])

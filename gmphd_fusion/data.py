@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -34,15 +33,12 @@ class Matrix(np.ndarray):
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         if ufunc in (np.isfinite, np.matmul):
             # Custom types break here, so simply convert to floats.
-            inputs = [np.asfarray(input_) if isinstance(input_, Matrix) else input_
-                      for input_ in inputs]
+            inputs = [np.asfarray(input_) if isinstance(input_, Matrix) else input_ for input_ in inputs]
         else:
             # Change to standard ndarray
-            inputs = [np.asarray(input_) if isinstance(input_, Matrix) else input_
-                      for input_ in inputs]
-        if 'out' in kwargs:
-            kwargs['out'] = tuple(np.asarray(out) if isinstance(out, Matrix) else out
-                                  for out in kwargs['out'])
+            inputs = [np.asarray(input_) if isinstance(input_, Matrix) else input_ for input_ in inputs]
+        if "out" in kwargs:
+            kwargs["out"] = tuple(np.asarray(out) if isinstance(out, Matrix) else out for out in kwargs["out"])
 
         result = super().__array_ufunc__(ufunc, method, *inputs, **kwargs)
         if result is NotImplemented:
@@ -92,9 +88,7 @@ class StateVector(Matrix):
             array = array.T
 
         if not (array.ndim == 2 and array.shape[1] == 1):
-            raise ValueError(
-                "state vector shape should be Nx1 dimensions: got {}".format(
-                    array.shape))
+            raise ValueError("state vector shape should be Nx1 dimensions: got {}".format(array.shape))
         return array.view(cls)
 
     @classmethod
@@ -203,11 +197,10 @@ class StateVectors(Matrix):
             # Convert type as may have type of weights
             state_vector = StateVector(state_vector.astype(np.float_, copy=False))
         elif axis == 1:  # Need to handle special cases of averaging potentially
-            state_vector = StateVector(
-                np.empty((state_vectors.shape[0], 1), dtype=state_vectors.dtype))
+            state_vector = StateVector(np.empty((state_vectors.shape[0], 1), dtype=state_vectors.dtype))
             for dim, row in enumerate(np.asarray(state_vectors)):
                 type_ = type(row[0])  # Assume all the same type
-                if hasattr(type_, 'average'):
+                if hasattr(type_, "average"):
                     # Check if type has custom average method
                     state_vector[dim, 0] = type_.average(row, weights=weights)
                 else:
@@ -222,9 +215,7 @@ class StateVectors(Matrix):
             return state_vector
 
     @staticmethod
-    def _cov(state_vectors, y=None, rowvar=True, bias=False, ddof=None, fweights=None,
-             aweights=None):
-
+    def _cov(state_vectors, y=None, rowvar=True, bias=False, ddof=None, fweights=None, aweights=None):
         if state_vectors.dtype != np.object_:
             # Can just use standard numpy averaging if not using custom objects
             cov = np.cov(np.asarray(state_vectors), y, rowvar, bias, ddof, fweights, aweights)
@@ -236,7 +227,7 @@ class StateVectors(Matrix):
             if aweights is None:
                 X_T = X.T
             else:
-                X_T = (X*np.asfarray(aweights)).T
+                X_T = (X * np.asfarray(aweights)).T
             cov = X @ X_T.conj()
             cov *= np.true_divide(1, float(w_sum))
         else:
@@ -259,8 +250,7 @@ class CovarianceMatrix(Matrix):
     def __new__(cls, *args, **kwargs):
         array = np.asarray(*args, **kwargs)
         if not array.ndim == 2:
-            raise ValueError("Covariance should have ndim of 2: got {}"
-                             "".format(array.ndim))
+            raise ValueError("Covariance should have ndim of 2: got {}" "".format(array.ndim))
 
         array = cls._cov_stabilization(array)
         return array.view(cls)
@@ -270,23 +260,34 @@ class CovarianceMatrix(Matrix):
         return 0.5 * (cov + cov.transpose())
 
 
-@dataclass
 class Track:
     """One track of one target"""
 
-    label: int
-    # time when the track was born
-    start_time: int
-    # a list of measurements, one meas can be None if the target was not detected
-    estimates: list[np.ndarray | None] = field(default_factory=list)
-    # time when the track was finished (when its Gaussian disappeared), -1 if not finished
-    end_time: int = -1
+    def __init__(self, label: int, start_time: int = -1, estimates: list[StateVector | None] = ()):
+        self.label: int = label
+        # time when the track was born
+        self.start_time = start_time
+        # time when the track was finished (when its Gaussian disappeared), -1 if not finished
+        self.end_time = -1
+        # a list of measurements, one meas can be empty if the target was not detected
+        self.estimates: list[StateVector | None] = list(estimates)
+        self._state_dim: int = -1
+
+        for e in estimates:
+            if e is not None:
+                self._state_dim = e.shape[0]
+                break
 
     def _add_missed_measurements(self, time: int):
-        missed_measurements = [None] * (time - self.start_time - len(self.estimates))
+        nmissed = time - self.start_time - len(self.estimates)
+        missed_measurements = [None] * nmissed
         self.estimates += missed_measurements
 
-    def add_estimate(self, estimate: np.ndarray | None, time: int) -> None:
+    def add_estimate(self, estimate: StateVector, time: int) -> None:
+        if self.start_time == -1:
+            self.start_time = time
+            self._state_dim = estimate.shape[0]
+
         if self.is_finished():
             raise ValueError("Cannot add estimate for a finished track")
         if time < self.start_time or time - self.start_time < len(self.estimates):
@@ -294,14 +295,24 @@ class Track:
                 "Adding estimates in the past relatively to the start "
                 "time or to the last added estimate is not allowed."
             )
+        if estimate.shape[0] != self._state_dim:
+            raise ValueError("Estimate shape and shapes of previous estimates mismatch.")
 
         self._add_missed_measurements(time)
         self.estimates.append(estimate)
+
+    def estimate_at(self, time: int) -> StateVector | None:
+        if self.start_time == -1 or time < self.start_time or (time - self.start_time >= len(self.estimates)):
+            return None
+
+        return self.estimates[time - self.start_time]
 
     def is_finished(self) -> bool:
         return self.end_time != -1
 
     def finish(self, time: int) -> None:
+        if self.start_time == -1:
+            raise ValueError("Cannot finish the track that is not started.")
         if self.is_finished():
             raise ValueError("Cannot finish the finished track")
         self._add_missed_measurements(time)
