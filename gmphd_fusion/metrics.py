@@ -63,9 +63,3 @@ def cpep(
 def eae_targets_number(num_targets_true, num_targets_pred):
     """Number of targets in time."""
     return np.mean(np.abs(np.subtract(num_targets_pred, num_targets_true)))
-
-
-def gospa(y_true, y_pred, p, c, alpha):
-    # TODO: maybe later, difficult to implement, needs auction algorithm
-    # TODO: maybe just use stonesoup?
-    raise NotImplementedError()
