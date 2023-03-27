@@ -62,11 +62,14 @@ class GMPHD:
                 estimates[g.label] = g.mean
         return estimates
 
-    def get_tracks(self) -> list[Track]:
-        return sorted(
+    def get_tracks(self, min_length: int | None = None) -> list[Track]:
+        tracks = sorted(
             list(self.tracks.values()) + list(self.finished_tracks.values()),
             key=lambda t: t.start_time,
         )
+        if min_length is not None:
+            tracks = [t for t in tracks if len(t) >= min_length]
+        return tracks
 
     def _predict(self, dt: float = 1.0):
         birth_intensity = self._predict_birth()

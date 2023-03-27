@@ -278,6 +278,9 @@ class Track:
                 self._state_dim = e.shape[0]
                 break
 
+    def __len__(self) -> int:
+        return len(self.estimates)
+
     def _add_missed_measurements(self, time: int):
         nmissed = time - self.start_time - len(self.estimates)
         missed_measurements = [None] * nmissed
