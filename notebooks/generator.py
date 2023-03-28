@@ -7,12 +7,11 @@ from gmphd_fusion.motion_models import LinearMotionModel, ConstantVelocityMotion
 
 
 def generate_trajectory(
-    nsamples: int, motion_model: LinearMotionModel, x0: StateVector, seed: int | None = None, dt: float = 1.0
+    nsamples: int, motion_model: LinearMotionModel, x0: StateVector, dt: float = 1.0
 ) -> StateVectors:
     if len(x0.shape) != 2 and x0.shape[1] != 1:
         raise ValueError("x0 should be a column vector.")
 
-    np.random.seed(seed)
     _A = motion_model.state_transition_matrix(dt=dt)
     _Q = motion_model.noise_matrix(dt=dt)
     trajectory = np.zeros((x0.shape[0], nsamples))
@@ -90,9 +89,7 @@ def generate_measurements(
     track: Track,
     measurement_model: MeasurementModel,
     detection_prob: float = 1.0,
-    seed: int | None = None,
 ) -> Track:
-    np.random.seed(seed)
     _H = measurement_model.measurement_matrix()
     _R = measurement_model.noise_matrix()
     measurements = []
@@ -115,13 +112,11 @@ def generate_clutter(
     poisson_intensity: float,
     uniform_min: np.ndarray,
     uniform_max: np.ndarray,
-    seed: int | None = None,
 ) -> list[StateVectors]:
     """The number of points in each step is determined by a sample from the Poisson distribution
     with a given intensity. Each point is sampled from a uniform distribution between
     uniform_min and uniform_max. The returned value contains matrices, each of different sizes
     (point_dim, clutter_at_time_step)."""
-    np.random.seed(seed)
     samples = []
     for i in range(steps):
         sample_size = poisson.rvs(poisson_intensity)
