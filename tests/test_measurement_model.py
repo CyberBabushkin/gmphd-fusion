@@ -20,7 +20,7 @@ class TestLinearCoordinateMeasurementModel(TestCase):
         self.assertTrue(np.all(np.isclose(self.model22.measurement_matrix(), [[1, 0], [0, 1]])))
 
     def test_noise_matrix(self):
-        expected_noise = [[self.noise ** 2, 0], [0, self.noise ** 2]]
+        expected_noise = [[self.noise**2, 0], [0, self.noise**2]]
         self.assertTrue(
             np.all(
                 np.isclose(

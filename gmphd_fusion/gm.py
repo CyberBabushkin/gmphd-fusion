@@ -9,7 +9,6 @@ from .data import StateVector, CovarianceMatrix
 
 
 class Gaussian:
-
     # An auto-generated label, incremented
     _next_label: int = 0
     BIRTH_LABEL: int = -1
@@ -47,7 +46,6 @@ class Gaussian:
 
 
 class GaussianMixture:
-
     def __init__(self, gaussians: list[Gaussian] = (), weights: list[float] = ()):
         """Components are always sorted by weight in the descending order."""
         self.gaussians: list[Gaussian] = list(gaussians)

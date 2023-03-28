@@ -10,72 +10,66 @@ from .measurement_model import MeasurementModel, LinearCoordinateMeasurementMode
 class Filter(abc.ABC):
     @abc.abstractmethod
     def predict(
-            self,
-            mean: StateVector,
-            cov: CovarianceMatrix,
-            motion_model: MotionModel,
-            *args,
-            **kwargs,
+        self,
+        mean: StateVector,
+        cov: CovarianceMatrix,
+        motion_model: MotionModel,
+        *args,
+        **kwargs,
     ) -> tuple[StateVector, CovarianceMatrix]:
         ...
 
     @abc.abstractmethod
     def predict_measurement(
-            self,
-            mean: StateVector,
-            cov: CovarianceMatrix,
-            measurement_model: MeasurementModel
+        self, mean: StateVector, cov: CovarianceMatrix, measurement_model: MeasurementModel
     ) -> tuple[StateVector, CovarianceMatrix]:
         ...
 
     @abc.abstractmethod
     def update(
-            self,
-            mean: StateVector,
-            cov: CovarianceMatrix,
-            measurement: StateVector,
-            measurement_model: MeasurementModel,
-            *args,
-            predicted_measurement: tuple[StateVector, CovarianceMatrix] | None = None,
-            **kwargs,
+        self,
+        mean: StateVector,
+        cov: CovarianceMatrix,
+        measurement: StateVector,
+        measurement_model: MeasurementModel,
+        *args,
+        predicted_measurement: tuple[StateVector, CovarianceMatrix] | None = None,
+        **kwargs,
     ) -> tuple[StateVector, CovarianceMatrix]:
         ...
 
 
 class KalmanFilter(Filter):
     def predict(
-            self,
-            mean: StateVector,
-            cov: CovarianceMatrix,
-            motion_model: MotionModel,
-            *args,
-            dt: float = 1.0,
-            **kwargs,
+        self,
+        mean: StateVector,
+        cov: CovarianceMatrix,
+        motion_model: MotionModel,
+        *args,
+        dt: float = 1.0,
+        **kwargs,
     ) -> tuple[StateVector, CovarianceMatrix]:
         mean_pred, cov_pred = motion_model(mean=mean, cov=cov, dt=dt)
         return mean_pred, cov_pred
 
     def predict_measurement(
-            self,
-            mean: StateVector,
-            cov: CovarianceMatrix,
-            measurement_model: LinearCoordinateMeasurementModel
+        self, mean: StateVector, cov: CovarianceMatrix, measurement_model: LinearCoordinateMeasurementModel
     ) -> tuple[StateVector, CovarianceMatrix]:
         z_hat = self._z_hat(mean, measurement_model)
         _S = self._innovation_covariance(cov, measurement_model)
         return z_hat, _S
 
     def update(
-            self,
-            mean: StateVector,
-            cov: CovarianceMatrix,
-            measurement: StateVector,
-            measurement_model: LinearCoordinateMeasurementModel,
-            *args,
-            predicted_measurement: tuple[StateVector, CovarianceMatrix] | None = None,
-            z_hat: StateVector | None = None,
-            innovation_covariance: CovarianceMatrix | None = None,
-            **kwargs,
+        self,
+        mean: StateVector,
+        cov: CovarianceMatrix,
+        measurement: StateVector,
+        measurement_model: LinearCoordinateMeasurementModel,
+        *args,
+        predicted_measurement: tuple[StateVector, CovarianceMatrix] | None = None,
+        z_hat: StateVector | None = None,
+        innovation_covariance: CovarianceMatrix | None = None,
+        **kwargs,
     ) -> tuple[StateVector, CovarianceMatrix]:
         """Returns posterior mean m, posterior cov P"""
         # measurement matrix
@@ -109,11 +103,9 @@ class KalmanFilter(Filter):
 
     @staticmethod
     def _innovation_covariance(
-            cov: CovarianceMatrix,
-            measurement_model: LinearCoordinateMeasurementModel) -> CovarianceMatrix:
+        cov: CovarianceMatrix, measurement_model: LinearCoordinateMeasurementModel
+    ) -> CovarianceMatrix:
         _H = measurement_model.measurement_matrix()
         _R = measurement_model.noise_matrix()
-        _S = CovarianceMatrix(
-            _H @ cov @ _H.transpose() + _R
-        )
+        _S = CovarianceMatrix(_H @ cov @ _H.transpose() + _R)
         return _S

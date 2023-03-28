@@ -10,38 +10,35 @@ class MotionModel(abc.ABC):
 
     @abc.abstractmethod
     def __call__(
-            self, mean: StateVector, cov: CovarianceMatrix, dt: float = 1.0
+        self, mean: StateVector, cov: CovarianceMatrix, dt: float = 1.0
     ) -> tuple[StateVector, CovarianceMatrix]:
         pass
 
     def _validate_shapes(self, mean: StateVector, cov: CovarianceMatrix) -> None:
         expected_mean = (self.dim, 1)
         if mean.shape != expected_mean:
-            raise ValueError(
-                f"Wrong mean dimension. Got: {mean.shape}, expected: {expected_mean}"
-            )
+            raise ValueError(f"Wrong mean dimension. Got: {mean.shape}, expected: {expected_mean}")
 
         expected_cov = (self.dim, self.dim)
         if cov.shape != expected_cov:
-            raise ValueError(
-                f"Wrong cov dimension. Got: {cov.shape}, expected: {expected_cov}"
-            )
+            raise ValueError(f"Wrong cov dimension. Got: {cov.shape}, expected: {expected_cov}")
 
 
 class LinearMotionModel(MotionModel):
-
     def __init__(self, dim: int, motion_noise: float):
         super().__init__(dim=dim)
         self._motion_noise = motion_noise
 
     @abc.abstractmethod
-    def state_transition_matrix(self, dt: float) -> np.ndarray: ...
+    def state_transition_matrix(self, dt: float) -> np.ndarray:
+        ...
 
     @abc.abstractmethod
-    def noise_matrix(self, dt: float) -> np.ndarray: ...
+    def noise_matrix(self, dt: float) -> np.ndarray:
+        ...
 
     def __call__(
-            self, mean: StateVector, cov: CovarianceMatrix, dt: float = 1.0
+        self, mean: StateVector, cov: CovarianceMatrix, dt: float = 1.0
     ) -> tuple[StateVector, CovarianceMatrix]:
         self._validate_shapes(mean, cov)
         state_transition = self.state_transition_matrix(dt)
@@ -67,7 +64,7 @@ class RandomWalk(LinearMotionModel):
         return np.eye(self.dim)
 
     def noise_matrix(self, dt: float = 1.0) -> np.ndarray:
-        return self._motion_noise ** 2 * np.eye(self.dim)
+        return self._motion_noise**2 * np.eye(self.dim)
 
 
 class ConstantVelocityMotionModel(LinearMotionModel):
@@ -90,12 +87,12 @@ class ConstantVelocityMotionModel(LinearMotionModel):
         )
 
     def noise_matrix(self, dt: float = 1.0) -> np.ndarray:
-        return self._motion_noise ** 2 * np.array(
+        return self._motion_noise**2 * np.array(
             [
-                [dt ** 3 / 3, 0, dt ** 2 / 2, 0],
-                [0, dt ** 3 / 3, 0, dt ** 2 / 2],
-                [dt ** 2 / 2, 0, dt, 0],
-                [0, dt ** 2 / 2, 0, dt],
+                [dt**3 / 3, 0, dt**2 / 2, 0],
+                [0, dt**3 / 3, 0, dt**2 / 2],
+                [dt**2 / 2, 0, dt, 0],
+                [0, dt**2 / 2, 0, dt],
             ]
         )
 
@@ -112,8 +109,8 @@ class ConstantAccelerationMotionModel(LinearMotionModel):
     def state_transition_matrix(self, dt: float = 1.0) -> np.ndarray:
         return np.array(
             [
-                [1, 0, dt, 0, dt ** 2 / 2, 0],
-                [0, 1, 0, dt, 0, dt ** 2 / 2],
+                [1, 0, dt, 0, dt**2 / 2, 0],
+                [0, 1, 0, dt, 0, dt**2 / 2],
                 [0, 0, 1, 0, dt, 0],
                 [0, 0, 0, 1, 0, dt],
                 [0, 0, 0, 0, 1, 0],
@@ -122,13 +119,13 @@ class ConstantAccelerationMotionModel(LinearMotionModel):
         )
 
     def noise_matrix(self, dt: float = 1.0) -> np.ndarray:
-        return self._motion_noise ** 2 * np.array(
+        return self._motion_noise**2 * np.array(
             [
-                [dt ** 5 / 20, 0, dt ** 4 / 8, 0, dt ** 3 / 6, 0],
-                [0, dt ** 5 / 20, 0, dt ** 4 / 8, 0, dt ** 3 / 6],
-                [dt ** 4 / 8, 0, dt ** 3 / 3, 0, dt ** 2 / 2, 0],
-                [0, dt ** 4 / 8, 0, dt ** 3 / 3, 0, dt ** 2 / 2],
-                [dt ** 3 / 6, 0, dt ** 2 / 2, 0, dt, 0],
-                [0, dt ** 3 / 6, 0, dt ** 2 / 2, 0, dt],
+                [dt**5 / 20, 0, dt**4 / 8, 0, dt**3 / 6, 0],
+                [0, dt**5 / 20, 0, dt**4 / 8, 0, dt**3 / 6],
+                [dt**4 / 8, 0, dt**3 / 3, 0, dt**2 / 2, 0],
+                [0, dt**4 / 8, 0, dt**3 / 3, 0, dt**2 / 2],
+                [dt**3 / 6, 0, dt**2 / 2, 0, dt, 0],
+                [0, dt**3 / 6, 0, dt**2 / 2, 0, dt],
             ]
         )
