@@ -161,7 +161,8 @@ class GMPHD:
             itertools.repeat(self.filter),
             itertools.repeat(self.measurement_model),
         )
-        measurement_mixtures = self._thread_pool.starmap(self._create_one_measurement_hypothesis, arguments)
+        measurement_mixtures = [self._create_one_measurement_hypothesis(*args) for args in arguments]
+        # measurement_mixtures = self._thread_pool.starmap(self._create_one_measurement_hypothesis, arguments)
         return measurement_mixtures
 
     def _update_weights(self, mixture: GaussianMixture) -> None:
