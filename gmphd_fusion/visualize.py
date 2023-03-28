@@ -1,6 +1,8 @@
-# import matplotlib
+from typing import Any
+
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 from scipy.stats import multivariate_normal
 
 from .data import Track
@@ -45,6 +47,26 @@ def visualize_mixture(
     img = zz.reshape((x_res, y_res))[::-1, :]
     axis.imshow(img)
     axis.set_title(f"k = {time}")
+
+
+def box_whisker_over_param(
+    axis: plt.Axes,
+    param_name: str,
+    labels: list[Any],
+    measurements: list[list[float]],
+    title: str,
+) -> None:
+    # https://stackoverflow.com/a/65529178
+    props = {
+        "boxprops": {"facecolor": "none", "edgecolor": "black"},
+        "medianprops": {"color": "black"},
+        "whiskerprops": {"color": "black"},
+        "capprops": {"color": "black"},
+    }
+    sns.boxplot(data=measurements, ax=axis, width=0.58, **props)
+    axis.set_xticks(axis.get_xticks(), labels)
+    axis.set_xlabel(param_name)
+    axis.set_title(title)
 
 
 def _rand_rgb_color() -> np.ndarray:
