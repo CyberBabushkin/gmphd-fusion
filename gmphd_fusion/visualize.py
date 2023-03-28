@@ -1,17 +1,137 @@
 from typing import Any
 
 import matplotlib.pyplot as plt
+import matplotlib.collections as mcoll
+import matplotlib.path as mpath
 import numpy as np
 import seaborn as sns
+from matplotlib import cm
+from matplotlib.lines import Line2D
 from scipy.stats import multivariate_normal
 
-from .data import Track
+from .data import Track, StateVectors, extract_coordinate_from
 from .gm import GaussianMixture
 
 
-def draw_state_vector(axis: plt.Axes, mean: np.ndarray, symbol: str, color: str) -> None:
-    mean = mean.flatten()
-    axis.plot(mean[0], mean[1], symbol, color=color)
+def _make_segments(x, y):
+    """
+    https://stackoverflow.com/a/25941474/3870394
+    Create list of line segments from x and y coordinates, in the correct format
+    for LineCollection: an array of the form numlines x (points per line) x 2 (x
+    and y) array
+    """
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+    return segments
+
+
+def _colorline(
+    axis, x, y, z=None, cmap=plt.get_cmap("copper"), colors=None, norm=plt.Normalize(0.0, 1.0), linewidth=3, alpha=1.0
+):
+    """
+    https://stackoverflow.com/a/25941474/3870394
+    http://nbviewer.ipython.org/github/dpsanders/matplotlib-examples/blob/master/colorline.ipynb
+    http://matplotlib.org/examples/pylab_examples/multicolored_line.html
+    Plot a colored line with coordinates x and y
+    Optionally specify colors in the array z
+    Optionally specify a colormap, a norm function and a line width
+    """
+    # Default colors equally spaced on [0,1]:
+    if z is None:
+        z = np.linspace(0.0, 1.0, len(x))
+    # Special case if a single number:
+    if not hasattr(z, "__iter__"):  # to check for numerical input -- this is a hack
+        z = np.array([z])
+
+    z = np.asarray(z)
+    segments = _make_segments(x, y)
+    lc = mcoll.LineCollection(segments, array=z, colors=colors, cmap=cmap, norm=norm, linewidth=linewidth, alpha=alpha)
+    axis.add_collection(lc)
+    return lc
+
+
+def _add_custom_legend_entry(
+    legend_handles: list,
+    legend_labels: list,
+    label: str,
+    entry: Any,
+) -> None:
+    if legend_handles is not None:
+        legend_handles.append(entry)
+    if legend_labels is not None:
+        legend_labels.append(label)
+
+
+def _rand_rgb_color() -> tuple[float, float, float, float]:
+    # coolwarm, turbo, nipy_spectral, brg
+    # tab10 (10pcs), Dark2(8pcs)
+    brg = cm.get_cmap("brg", 50)
+    return brg(np.random.random())
+
+
+def _shades_gray(n: int) -> np.ndarray:
+    return np.linspace(0.2, 0.6, n)
+
+
+def _plot_scatter(
+    axis: plt.Axes,
+    vectors: list[StateVectors],
+    marker: str,
+    marker_size: int,
+    linewidths: int,
+    base_color: np.ndarray | tuple[float, float, float],
+) -> None:
+    alphas = _shades_gray(len(vectors))
+    for vectors_t, alpha in zip(vectors, alphas):
+        if vectors_t is None or not vectors_t.size:
+            return
+
+        x = vectors_t[0, :]
+        y = vectors_t[1, :]
+        axis.scatter(x, y, color=np.append(base_color, alpha), marker=marker, s=marker_size, linewidths=linewidths)
+
+
+def _plot_tracks_time(
+    axis: plt.Axes,
+    tracks: list[Track],
+    cmap_name: str = "Greys",
+    nticks: int = 10,
+) -> None:
+    (time_min, time_max), x_all = extract_coordinate_from(tracks, 0)
+    _, y_all = extract_coordinate_from(tracks, 1)
+    for t, x_t, y_t in zip(tracks, x_all, y_all):
+        path = mpath.Path(np.column_stack([x_t, y_t]))
+        verts = path.interpolated(steps=3).vertices
+        x, y = verts[:, 0], verts[:, 1]
+        color_from = (t.start_time - time_min) / (time_max - time_min)
+        color_to = (t.end_time - time_min) / (time_max - time_min)
+        z = np.linspace(color_from, color_to, len(x))
+        _colorline(axis, x, y, z, cmap=plt.get_cmap(cmap_name), linewidth=2)
+
+    # legend
+    if axis.collections:
+        cb = plt.colorbar(axis.collections[-1], ax=axis)
+        ticks = np.linspace(0, 1, nticks)
+        tick_labels = [str(t) for t in np.linspace(time_min, time_max, nticks, dtype=int, endpoint=True)]
+        cb.set_ticks(ticks)
+        cb.ax.set_yticklabels(tick_labels)
+        cb.set_label("Time step")
+
+
+def _plot_tracks_colors(
+    axis: plt.Axes,
+    tracks: list[Track],
+    legend_handles: list = None,
+    legend_labels: list = None,
+) -> None:
+    _, x_all = extract_coordinate_from(tracks, 0)
+    _, y_all = extract_coordinate_from(tracks, 1)
+    for t, x_t, y_t in zip(tracks, x_all, y_all):
+        color = _rand_rgb_color()
+        axis.plot(x_t, y_t, color=color, marker="o", markersize=3, linestyle="--", linewidth=2, alpha=0.8)
+        _add_custom_legend_entry(
+            legend_handles, legend_labels, f"Track {t.label}", Line2D([0], [0], color=color, lw=1.2)
+        )
 
 
 def visualize_mixture(
@@ -69,94 +189,78 @@ def box_whisker_over_param(
     axis.set_title(title)
 
 
-def _rand_rgb_color() -> np.ndarray:
-    return np.random.rand(3)
+def visualize_coord_change(
+    axis: plt.Axes,
+    tracks: list[Track],
+    coord_idx: int,
+    coord_name: str,
+    legend_handles: list = None,
+    legend_labels: list = None,
+) -> None:
+    (time_min, time_max), data = extract_coordinate_from(tracks, coord_idx)
+    x = range(time_max - time_min)
+    xticks = list(range(time_min, time_max))
+    for td in data:
+        axis.plot(x, td, color="black", linewidth=1.2)
+
+    axis.set_xticks(x, xticks)
+    axis.set_xlabel("Time step")
+    axis.set_ylabel(f"{coord_name} coordinate (in m)")
+    axis.margins(x=0, y=0)
+    _add_custom_legend_entry(legend_handles, legend_labels, "Ground truth", Line2D([0], [0], color="black", lw=1.2))
 
 
-def _visualize_ground_truth(
+def visualize_estimated_tracks(
+    axis: plt.Axes,
+    tracks: list[Track],
+    legend_handles: list = None,
+    legend_labels: list = None,
+) -> None:
+    _plot_tracks_colors(axis, tracks, legend_handles=legend_handles, legend_labels=legend_labels)
+
+
+def visualize_true_tracks(
     axis: plt.Axes,
     tracks: list[Track],
 ) -> None:
-    for t in tracks:
-        vector_estimates = np.hstack(t.estimates)
-        x = vector_estimates[0, :]
-        y = vector_estimates[1, :]
-        axis.plot(
-            x, y, color="b", marker="|", linestyle="-", label=f"Ground truth", markersize=1, linewidth=1, alpha=0.8
-        )
+    # nipy_spectral
+    _plot_tracks_time(axis, tracks, cmap_name="copper")
 
 
-def _visualize_tracks(
+def visualize_measurements(
     axis: plt.Axes,
-    tracks: list[Track],
+    measurements: list[Track],
+    markersize: int = 15,
+    linewidths: int = 1,
+    legend_handles: list = None,
+    legend_labels: list = None,
 ) -> None:
-    for t in tracks:
-        vector_estimates = np.hstack([est for est in t.estimates if est is not None])
-        x = vector_estimates[0, :]
-        y = vector_estimates[1, :]
-        axis.plot(
-            x, y, color=_rand_rgb_color(), marker="o", markersize=1, linestyle="-", label=f"Track {t.label}", alpha=0.8
-        )
+    red = (1.0, 0.0, 0.0)
+    _, x_all = extract_coordinate_from(measurements, 0)
+    _, y_all = extract_coordinate_from(measurements, 1)
+    vectors = [StateVectors(np.row_stack((x, y))) for x, y in zip(x_all, y_all)]
+    _plot_scatter(axis, vectors, "*", markersize, linewidths, red)
+
+    _add_custom_legend_entry(
+        legend_handles,
+        legend_labels,
+        "Measurement",
+        Line2D([0], [0], marker="*", color="w", markerfacecolor=np.append(red, 0.5), markersize=10),
+    )
 
 
-def _visualize_estimates(
+def visualize_clutter(
     axis: plt.Axes,
-    estimates: list[np.ndarray],
+    clutter: list[StateVectors],
+    markersize: int = 10,
+    linewidths: int = 1,
+    legend_handles: list = None,
+    legend_labels: list = None,
 ) -> None:
-    if not estimates:
-        return
-    estimates = np.hstack([e for e in estimates if e is not None])
-    x = estimates[0, :]
-    y = estimates[1, :]
-    axis.scatter(x, y, color=_rand_rgb_color(), marker="o", label="Estimates", s=10, alpha=0.8)
-
-
-def _visualize_measurements(
-    axis: plt.Axes,
-    measurements: np.ndarray,
-) -> None:
-    if not measurements.size:
-        return
-    x = measurements[0, :]
-    y = measurements[1, :]
-    axis.scatter(x, y, color="r", marker="*", label="Measurements", s=10)
-
-
-def _visualize_clutter(
-    axis: plt.Axes,
-    clutter: np.ndarray,
-) -> None:
-    if not clutter.size:
-        return
-    x = clutter[0, :]
-    y = clutter[1, :]
-    axis.scatter(x, y, color="b", marker="x", s=1, label="Clutter")
-
-
-def visualize_trajectories(
-    axis: plt.Axes,
-    ground_truth: list[Track] | None,
-    estimates: list[Track] | list[np.ndarray] | None,
-    measurements: np.ndarray | None,
-    clutter: np.ndarray | None,
-    time: int,
-) -> None:
-    """2D only.
-
-    Clutter and measurements should be a list of matrices of size (2, n) where n is the
-    number of clutter/measurements points at time step k."""
-
-    if clutter is not None:
-        _visualize_clutter(axis, clutter)
-    if ground_truth is not None:
-        _visualize_ground_truth(axis, ground_truth)
-    if measurements is not None:
-        _visualize_measurements(axis, measurements)
-    if estimates is not None:
-        if estimates and isinstance(estimates[0], np.ndarray):
-            _visualize_estimates(axis, estimates)
-        else:
-            _visualize_tracks(axis, estimates)
-
-    axis.set_title(f"Time = {time}")
-    # axis.legend()
+    _plot_scatter(axis, clutter, "x", markersize, linewidths, np.zeros(3))
+    _add_custom_legend_entry(
+        legend_handles,
+        legend_labels,
+        "Clutter",
+        Line2D([0], [0], marker="X", color="w", markerfacecolor=(0.0, 0.0, 0.0, 0.5), markersize=10),
+    )

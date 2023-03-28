@@ -32,7 +32,7 @@ def _generate_clean_track(
     for i in range(n_samples):
         track.add_estimate(StateVector(x), time0 + i)
         x = state_transition_matrix @ x
-    track.finish(n_samples)
+    track.finish(time0 + n_samples)
     return track
 
 
@@ -103,7 +103,7 @@ def generate_measurements(
         measurements.append(measurement)
 
     measured_track = Track(label=track.label, start_time=track.start_time, estimates=measurements)
-    measured_track.end_time = track.end_time
+    measured_track.finish(track.end_time)
     return measured_track
 
 

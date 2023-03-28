@@ -320,3 +320,20 @@ class Track:
             raise ValueError("Cannot finish the finished track")
         self._add_missed_measurements(time)
         self.end_time = time
+
+
+def extract_coordinate_from(
+    tracks: list[Track],
+    coord_idx: int,
+) -> tuple[tuple[int, int], list[list[float]]]:
+    """From each estimate of each track from a list of Tracks extract the coordinate at position
+    `coord_idx`. The"""
+    time_min = min([t.start_time for t in tracks])
+    time_max = max([t.end_time for t in tracks])
+    estimates = []
+    for time in range(time_min, time_max):
+        estimates_t = [t.estimate_at(time) for t in tracks]
+        estimates_t = list(map(lambda e: (e[coord_idx, 0] if e is not None else np.nan), estimates_t))
+        estimates.append(estimates_t)
+    data = [list(coord_track) for coord_track in zip(*estimates)]
+    return (time_min, time_max), data
