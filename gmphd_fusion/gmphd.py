@@ -1,4 +1,7 @@
 """GM-PHD filter with labels and fusion capabilities."""
+import itertools
+from multiprocessing.pool import Pool
+
 import numpy as np
 
 from .data import Track, StateVector, StateVectors, CovarianceMatrix
@@ -24,6 +27,7 @@ class GMPHD:
         merge_threshold: float,
         max_components: int,
         target_weight_threshold: float = 0.5,
+        thread_pool: Pool | None = None,
     ):
         self.prior: GaussianMixture = init_gm
         self.posterior: GaussianMixture = init_gm
@@ -41,6 +45,7 @@ class GMPHD:
         self.timestamp: int = 0
         self.tracks: dict[int, Track] = {}
         self.finished_tracks: dict[int, Track] = {}
+        self._thread_pool = thread_pool or Pool()
 
     def step(self, measurements: StateVectors, timestamp: float):
         """Measurements expected shape: (measurement_dim, #measurements)"""
@@ -70,6 +75,12 @@ class GMPHD:
         if min_length is not None:
             tracks = [t for t in tracks if len(t) >= min_length]
         return tracks
+
+    def finish(self) -> None:
+        while self.tracks:
+            l, t = self.tracks.popitem()
+            t.finish(self.timestamp)
+            self.finished_tracks[l] = t
 
     def _predict(self, dt: float = 1.0):
         birth_intensity = self._predict_birth()
@@ -109,31 +120,48 @@ class GMPHD:
             misdetection_mixture.add_to_mixture(gaussian=component.copy(with_label=True), weight=misdetection_weight)
         return misdetection_mixture
 
+    @staticmethod
+    def _create_one_measurement_hypothesis(
+        measurement: StateVector,
+        predicted_measurements: list[tuple[StateVector, CovarianceMatrix]],
+        prior: GaussianMixture,
+        detection_prob: float,
+        filter: Filter,
+        measurement_model: MeasurementModel,
+    ) -> GaussianMixture:
+        measurement_mixture = GaussianMixture()
+        for (component, weight), predicted_measurement in zip(prior, predicted_measurements):
+            mean, cov = component.mean, component.cov
+            meas_mean, meas_cov = predicted_measurement
+            posterior_weight = detection_prob * weight * evaluate_gaussian(meas_mean, meas_cov, at=measurement)
+            posterior_mean, posterior_cov = filter.update(
+                mean,
+                cov,
+                measurement,
+                measurement_model,
+                predicted_measurement=predicted_measurement,
+            )
+            measurement_mixture.add_to_mixture(
+                Gaussian(posterior_mean, posterior_cov, component.label),
+                posterior_weight,
+            )
+        return measurement_mixture
+
     def _create_measurements_hypotheses(self, measurements: StateVectors) -> list[GaussianMixture]:
         # Measurements shape: (meas_sim, #meas)
         # eta and S for all existing components
         predicted_measurements = [
             self.filter.predict_measurement(g.mean, g.cov, self.measurement_model) for g, _ in self.prior
         ]
-        measurement_mixtures = []
-        for measurement in measurements:
-            measurement_mixture = GaussianMixture()
-            for (component, weight), predicted_measurement in zip(self.prior, predicted_measurements):
-                mean, cov = component.mean, component.cov
-                meas_mean, meas_cov = predicted_measurement
-                posterior_weight = self.detection_prob * weight * evaluate_gaussian(meas_mean, meas_cov, at=measurement)
-                posterior_mean, posterior_cov = self.filter.update(
-                    mean,
-                    cov,
-                    measurement,
-                    self.measurement_model,
-                    predicted_measurement=predicted_measurement,
-                )
-                measurement_mixture.add_to_mixture(
-                    Gaussian(posterior_mean, posterior_cov, component.label),
-                    posterior_weight,
-                )
-            measurement_mixtures.append(measurement_mixture)
+        arguments = zip(
+            measurements,
+            itertools.repeat(predicted_measurements),
+            itertools.repeat(self.prior),
+            itertools.repeat(self.detection_prob),
+            itertools.repeat(self.filter),
+            itertools.repeat(self.measurement_model),
+        )
+        measurement_mixtures = self._thread_pool.starmap(self._create_one_measurement_hypothesis, arguments)
         return measurement_mixtures
 
     def _update_weights(self, mixture: GaussianMixture) -> None:
