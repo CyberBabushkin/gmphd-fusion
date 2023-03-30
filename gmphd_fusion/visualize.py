@@ -13,6 +13,11 @@ from .data import Track, StateVectors, extract_coordinate_from
 from .gm import GaussianMixture
 
 
+CMAPS = ("coolwarm", "turbo", "nipy_spectral", "brg")
+COLORS_PER_CMAP = 64
+MAX_COLORS = len(CMAPS) * COLORS_PER_CMAP
+
+
 def _make_segments(x, y):
     """
     https://stackoverflow.com/a/25941474/3870394
@@ -65,8 +70,12 @@ def _add_custom_legend_entry(
 def _rand_rgb_color() -> tuple[float, float, float, float]:
     # coolwarm, turbo, nipy_spectral, brg
     # tab10 (10pcs), Dark2(8pcs)
-    brg = cm.get_cmap("brg", 50)
-    return brg(np.random.random())
+    cmaps = [
+        cm.get_cmap(cmap, MAX_COLORS)
+        for cmap in CMAPS
+    ]
+    cmap = np.random.choice(cmaps)
+    return cmap(np.random.random())
 
 
 def _shades_gray(n: int) -> np.ndarray:
@@ -81,14 +90,17 @@ def _plot_scatter(
     linewidths: int,
     base_color: np.ndarray | tuple[float, float, float],
 ) -> None:
+    """Each element of the input list is point at time k."""
     alphas = _shades_gray(len(vectors))
-    for vectors_t, alpha in zip(vectors, alphas):
-        if vectors_t is None or not vectors_t.size:
-            return
 
-        x = vectors_t[0, :]
-        y = vectors_t[1, :]
-        axis.scatter(x, y, color=np.append(base_color, alpha), marker=marker, s=marker_size, linewidths=linewidths)
+    colors = sum([
+        [np.append(base_color, a)] * v.shape[1]
+        for v, a in zip(vectors, alphas)
+    ], start=[])
+    vectors = np.hstack(vectors)
+    x = vectors[0, :].flatten()
+    y = vectors[1, :].flatten()
+    axis.scatter(x, y, color=colors, marker=marker, s=marker_size, linewidths=linewidths)
 
 
 def _plot_tracks_time(
@@ -126,9 +138,13 @@ def _plot_tracks_colors(
 ) -> None:
     _, x_all = extract_coordinate_from(tracks, 0)
     _, y_all = extract_coordinate_from(tracks, 1)
+
+    used_colors = set()
     for t, x_t, y_t in zip(tracks, x_all, y_all):
         color = _rand_rgb_color()
-        axis.plot(x_t, y_t, color=color, marker="o", markersize=3, linestyle="--", linewidth=2, alpha=0.8)
+        while len(tracks) < MAX_COLORS and color in used_colors:
+            color = _rand_rgb_color()
+        axis.plot(x_t, y_t, color=color, marker="o", markersize=2, linestyle="--", linewidth=2, alpha=0.8)
         _add_custom_legend_entry(
             legend_handles, legend_labels, f"Track {t.label}", Line2D([0], [0], color=color, lw=1.2)
         )
@@ -194,16 +210,20 @@ def visualize_coord_change(
     tracks: list[Track],
     coord_idx: int,
     coord_name: str,
+    marker: str = None,
     legend_handles: list = None,
     legend_labels: list = None,
 ) -> None:
+    """If marker is set, scatter will be used instead of a line plot."""
     (time_min, time_max), data = extract_coordinate_from(tracks, coord_idx)
     x = range(time_max - time_min)
-    xticks = list(range(time_min, time_max))
     for td in data:
-        axis.plot(x, td, color="black", linewidth=1.2)
+        if marker is None:
+            axis.plot(x, td, color="black", linewidth=1.2)
+        else:
+            axis.scatter(x, td, facecolors='none', edgecolors='black', marker="o", s=20)
 
-    axis.set_xticks(x, xticks)
+    axis.set_xticks(np.linspace(0, time_max - time_min, 11), np.linspace(time_min, time_max, 11, dtype=int))
     axis.set_xlabel("Time step")
     axis.set_ylabel(f"{coord_name} coordinate (in m)")
     axis.margins(x=0, y=0)
@@ -236,9 +256,15 @@ def visualize_measurements(
     legend_labels: list = None,
 ) -> None:
     red = (1.0, 0.0, 0.0)
-    _, x_all = extract_coordinate_from(measurements, 0)
-    _, y_all = extract_coordinate_from(measurements, 1)
-    vectors = [StateVectors(np.row_stack((x, y))) for x, y in zip(x_all, y_all)]
+    _, x_tracks_time = extract_coordinate_from(measurements, 0)
+    _, y_tracks_time = extract_coordinate_from(measurements, 1)
+
+    # the first coordinate is now the time step
+    x_time_tracks = np.asarray(x_tracks_time).T
+    y_time_tracks = np.asarray(y_tracks_time).T
+
+    # create a sequence of StateVectors with all measurements for each time step
+    vectors = [StateVectors(np.row_stack((x, y))) for x, y in zip(x_time_tracks, y_time_tracks)]
     _plot_scatter(axis, vectors, "*", markersize, linewidths, red)
 
     _add_custom_legend_entry(
