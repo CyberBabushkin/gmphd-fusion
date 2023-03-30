@@ -1,8 +1,8 @@
 from typing import Any
 
-import matplotlib.pyplot as plt
 import matplotlib.collections as mcoll
 import matplotlib.path as mpath
+import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from matplotlib import cm
@@ -11,7 +11,6 @@ from scipy.stats import multivariate_normal
 
 from .data import Track, StateVectors, extract_coordinate_from
 from .gm import GaussianMixture
-
 
 CMAPS = ("coolwarm", "turbo", "nipy_spectral", "brg")
 COLORS_PER_CMAP = 64
@@ -70,10 +69,7 @@ def _add_custom_legend_entry(
 def _rand_rgb_color() -> tuple[float, float, float, float]:
     # coolwarm, turbo, nipy_spectral, brg
     # tab10 (10pcs), Dark2(8pcs)
-    cmaps = [
-        cm.get_cmap(cmap, MAX_COLORS)
-        for cmap in CMAPS
-    ]
+    cmaps = [cm.get_cmap(cmap, MAX_COLORS) for cmap in CMAPS]
     cmap = np.random.choice(cmaps)
     return cmap(np.random.random())
 
@@ -93,10 +89,7 @@ def _plot_scatter(
     """Each element of the input list is point at time k."""
     alphas = _shades_gray(len(vectors))
 
-    colors = sum([
-        [np.append(base_color, a)] * v.shape[1]
-        for v, a in zip(vectors, alphas)
-    ], start=[])
+    colors = sum([[np.append(base_color, a)] * v.shape[1] for v, a in zip(vectors, alphas)], start=[])
     vectors = np.hstack(vectors)
     x = vectors[0, :].flatten()
     y = vectors[1, :].flatten()
@@ -221,7 +214,7 @@ def visualize_coord_change(
         if marker is None:
             axis.plot(x, td, color="black", linewidth=1.2)
         else:
-            axis.scatter(x, td, facecolors='none', edgecolors='black', marker="o", s=20)
+            axis.scatter(x, td, facecolors="none", edgecolors="black", marker="o", s=20)
 
     axis.set_xticks(np.linspace(0, time_max - time_min, 11), np.linspace(time_min, time_max, 11, dtype=int))
     axis.set_xlabel("Time step")

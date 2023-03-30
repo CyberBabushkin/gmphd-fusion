@@ -3,8 +3,8 @@ import abc
 import numpy as np
 
 from .data import StateVector, CovarianceMatrix
-from .motion_models import MotionModel
 from .measurement_model import MeasurementModel, LinearCoordinateMeasurementModel
+from .motion_models import MotionModel
 
 
 class Filter(abc.ABC):

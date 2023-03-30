@@ -8,8 +8,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from generator import generate_measurements, generate_clutter
-from test_case import TestUseCase2D
-
 from gmphd_fusion.data import Track, StateVectors
 from gmphd_fusion.filter import KalmanFilter
 from gmphd_fusion.gmphd import GMPHD
@@ -23,6 +21,7 @@ from gmphd_fusion.visualize import (
     box_whisker_over_param,
     visualize_coord_change,
 )
+from test_case import TestUseCase2D
 
 
 def _short_hash_str(s: str) -> str:

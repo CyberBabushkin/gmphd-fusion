@@ -1,6 +1,7 @@
+from unittest import TestCase
+
 import numpy as np
 from filterpy.kalman import KalmanFilter as TrueKF
-from unittest import TestCase
 
 from gmphd_fusion.filter import KalmanFilter as TestKF
 from gmphd_fusion.measurement_model import LinearCoordinateMeasurementModel
