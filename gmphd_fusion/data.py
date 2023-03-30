@@ -327,7 +327,10 @@ def extract_coordinate_from(
     coord_idx: int,
 ) -> tuple[tuple[int, int], list[list[float]]]:
     """From each estimate of each track from a list of Tracks extract the coordinate at position
-    `coord_idx`. The"""
+    `coord_idx`. The first tuple is the min time and the max time when estimates are found.
+    The second list contains lists of estimates for each track. The length of the outer list is
+    equal to the input list length, the inner lists contain the same number of estimates, from
+    time_min to time_max, np.nan when estimates either didn't exist or are misdetected."""
     time_min = min([t.start_time for t in tracks])
     time_max = max([t.end_time for t in tracks])
     estimates = []
