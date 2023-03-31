@@ -168,7 +168,7 @@ class GMPHD:
         return measurement_mixtures
 
     def _update_weights(self, mixture: GaussianMixture) -> None:
-        normalization = sum(mixture.weights) + self.clutter_spatial_density
+        normalization = sum(mixture.weights) + self.clutter_spatial_density + 1e-15
         mixture.weights = [w / normalization for w in mixture.weights]
 
     def _prune(self, mixture: GaussianMixture) -> GaussianMixture:
