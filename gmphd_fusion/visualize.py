@@ -7,6 +7,7 @@ import numpy as np
 import seaborn as sns
 from matplotlib import cm
 from matplotlib.lines import Line2D
+from matplotlib.ticker import ScalarFormatter
 from scipy.stats import multivariate_normal
 
 from .data import Track, StateVectors, extract_coordinate_from
@@ -180,10 +181,10 @@ def visualize_mixture(
 
 def box_whisker_over_param(
     axis: plt.Axes,
-    param_name: str,
-    labels: list[Any],
+    x_label: str,
+    y_label: str,
+    x_ticks: list[Any],
     measurements: list[list[float]],
-    title: str,
 ) -> None:
     # https://stackoverflow.com/a/65529178
     props = {
@@ -193,9 +194,12 @@ def box_whisker_over_param(
         "capprops": {"color": "black"},
     }
     sns.boxplot(data=measurements, ax=axis, width=0.58, **props)
-    axis.set_xticks(axis.get_xticks(), labels)
-    axis.set_xlabel(param_name)
-    axis.set_title(title)
+    axis.plot(np.mean(measurements, axis=1), color="red", marker="o", markersize=5)
+    axis.set_xticks(list(range(len(measurements))), x_ticks)
+    # axis.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    # axis.ticklabel_format(style="sci", axis="x", scilimits=(0, 0))
+    axis.set_xlabel(x_label)
+    axis.set_ylabel(y_label)
 
 
 def visualize_coord_change(

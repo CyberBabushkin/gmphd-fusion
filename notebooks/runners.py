@@ -27,7 +27,8 @@ from test_case import TestUseCase2D
 def _short_hash_str(s: str) -> str:
     sha = hashlib.sha256()
     sha.update(s.encode())
-    return sha.hexdigest()[:8]
+    ret = sha.hexdigest()[:8]
+    return ret
 
 
 def _save_close_fig(_fig: plt.Figure, _path: Path):
@@ -102,10 +103,10 @@ def save_posterior_plot(uc, posterior, save_dir):
     _save_close_fig(fig, save_dir / "posterior_plot.png")
 
 
-def save_box_whisker_plot(param_name, labels, measurements, title, save_dir):
+def save_box_whisker_plot(x_label, y_label, x_ticks, measurements, save_dir):
     fig, ax = plt.subplots(1, 1, figsize=(10, 4))
-    box_whisker_over_param(ax, param_name, labels, measurements, title)
-    _save_close_fig(fig, save_dir / f"box_whisker_{_short_hash_str(title)}_plot.png")
+    box_whisker_over_param(ax, x_label, y_label, x_ticks, measurements)
+    _save_close_fig(fig, save_dir / f"box_whisker_{_short_hash_str(str(x_label + y_label))}_plot.png")
 
 
 def compute_metrics(uc: TestUseCase2D, tracks: list[Track], raw: bool = False) -> tuple[float | list[float], float]:
@@ -159,6 +160,10 @@ def run_test(test_name: str, index: int, uc: TestUseCase2D, out_dir: Path, **kwa
 
     experiment_dir = out_dir / test_name / f"{param_name}={param_value:.3f}" / f"{index:03d}"
     experiment_dir.mkdir(mode=0o755, parents=True, exist_ok=True)
+
+    if (experiment_dir / "_FINISHED").exists():
+        # already done
+        return
 
     # disable random seed while experimenting
     # set_seed(uc.random_seed + index)
