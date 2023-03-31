@@ -119,7 +119,10 @@ def generate_clutter(
     (point_dim, clutter_at_time_step)."""
     samples = []
     for i in range(steps):
-        sample_size = poisson.rvs(poisson_intensity)
+        if not np.isclose(poisson_intensity, 0.):
+            sample_size = poisson.rvs(poisson_intensity)
+        else:
+            sample_size = 0
         clutter_step = np.random.default_rng().uniform(
             low=uniform_min, high=uniform_max, size=(uniform_min.shape[0], sample_size)
         )
