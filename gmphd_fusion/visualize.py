@@ -184,6 +184,7 @@ def box_whisker_over_param(
     x_label: str,
     y_label: str,
     x_ticks: list[Any],
+    x_text: str | None,
     measurements: list[list[float]],
 ) -> None:
     # https://stackoverflow.com/a/65529178
@@ -196,8 +197,9 @@ def box_whisker_over_param(
     sns.boxplot(data=measurements, ax=axis, width=0.58, **props)
     axis.plot(np.mean(measurements, axis=1), color="red", marker="o", markersize=5)
     axis.set_xticks(list(range(len(measurements))), x_ticks)
-    # axis.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-    # axis.ticklabel_format(style="sci", axis="x", scilimits=(0, 0))
+    if x_text is not None:
+        formatter = axis.xaxis.get_major_formatter()
+        formatter.set_offset_string(x_text)
     axis.set_xlabel(x_label)
     axis.set_ylabel(y_label)
 

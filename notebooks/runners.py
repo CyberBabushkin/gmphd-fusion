@@ -103,9 +103,9 @@ def save_posterior_plot(uc, posterior, save_dir):
     _save_close_fig(fig, save_dir / "posterior_plot.png")
 
 
-def save_box_whisker_plot(x_label, y_label, x_ticks, measurements, save_dir):
+def save_box_whisker_plot(x_label, y_label, x_ticks, x_text, measurements, save_dir):
     fig, ax = plt.subplots(1, 1, figsize=(10, 4))
-    box_whisker_over_param(ax, x_label, y_label, x_ticks, measurements)
+    box_whisker_over_param(ax, x_label, y_label, x_ticks, x_text, measurements)
     _save_close_fig(fig, save_dir / f"box_whisker_{_short_hash_str(str(x_label + y_label))}_plot.png")
 
 
@@ -158,7 +158,7 @@ def run_test(test_name: str, index: int, uc: TestUseCase2D, out_dir: Path, **kwa
     # copy is not necessary since this function will run in a different thread and objects are pickled
     setattr(uc, param_name, param_value)
 
-    experiment_dir = out_dir / test_name / f"{param_name}={param_value:.3f}" / f"{index:03d}"
+    experiment_dir = out_dir / test_name / f"{param_name}={param_value:.3e}" / f"{index:03d}"
     experiment_dir.mkdir(mode=0o755, parents=True, exist_ok=True)
 
     if (experiment_dir / "_FINISHED").exists():
