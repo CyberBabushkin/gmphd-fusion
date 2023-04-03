@@ -17,12 +17,49 @@ class Filter(abc.ABC):
         *args,
         **kwargs,
     ) -> tuple[StateVector, CovarianceMatrix]:
+        """Perform the prediction step and compute a new mean and cov.
+
+        Parameters
+        ----------
+        mean : StateVector
+            The mean vector before the update.
+        cov : CovarianceMatrix
+            The covariance matrix before the update.
+        motion_model : MotionModel
+            The motion model.
+        args : tuple, optional
+            Additional positional arguments.
+        kwargs : dict, optional
+            Additional keyword arguments.
+
+        Returns
+        -------
+        StateVector, CovarianceMatrix
+            Mean and covariance matrix after the filter predict.
+        """
         ...
 
     @abc.abstractmethod
     def predict_measurement(
         self, mean: StateVector, cov: CovarianceMatrix, measurement_model: MeasurementModel
     ) -> tuple[StateVector, CovarianceMatrix]:
+        """Compute the expected measurement and the innovation matrix from the state
+        using the measurement model.
+
+        Parameters
+        ----------
+        mean : StateVector
+            The state mean.
+        cov : CovarianceMatrix
+            The state covariance matrix.
+        measurement_model : MeasurementModel
+            The measurement model.
+
+        Returns
+        -------
+        StateVector, CovarianceMatrix
+            The predicted measurement and the innovation matrix.
+        """
         ...
 
     @abc.abstractmethod
@@ -36,10 +73,36 @@ class Filter(abc.ABC):
         predicted_measurement: tuple[StateVector, CovarianceMatrix] | None = None,
         **kwargs,
     ) -> tuple[StateVector, CovarianceMatrix]:
+        """Perform the update step and compute a new mean and cov.
+
+        Parameters
+        ----------
+        mean : StateVector
+            The mean vector before the update.
+        cov : CovarianceMatrix
+            The covariance matrix before the update.
+        measurement : StateVector
+            The measurement at the update time step.
+        measurement_model : MeasurementModel
+            The measurement model.
+        args : tuple, optional
+            Additional positional arguments.
+        predicted_measurement : tuple of StateVector and CovarianceMatrix, optional
+            Optimization. If not provided, it will be computed using `predict_measurement`.
+        kwargs : dict, optional
+            Additional keyword arguments.
+
+        Returns
+        -------
+        StateVector, CovarianceMatrix
+            Mean and covariance matrix after the filter update.
+        """
         ...
 
 
 class KalmanFilter(Filter):
+    """The standard implementation of the Kalman filter."""
+
     def predict(
         self,
         mean: StateVector,

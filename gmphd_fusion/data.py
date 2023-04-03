@@ -261,9 +261,18 @@ class CovarianceMatrix(Matrix):
 
 
 class Track:
-    """One track of one target"""
-
     def __init__(self, label: int, start_time: int = -1, estimates: list[StateVector | None] = ()):
+        """One track of one target.
+
+        Parameters
+        ----------
+        label : int
+            A unique label for the track.
+        start_time : int, optional
+            Can be set manually. If -1, it will be set automatically to the time of the first estimate.
+        estimates : list of StateVector or list of None, optional
+            The list of all estimates.
+        """
         self.label: int = label
         # time when the track was born
         self.start_time = start_time
@@ -287,6 +296,22 @@ class Track:
         self.estimates += missed_measurements
 
     def add_estimate(self, estimate: StateVector, time: int) -> None:
+        """Add estimate to the track at a specific time.
+
+        Parameters
+        ----------
+        estimate : StateVector
+            The estimate. Shape is validated and should be the same for all.
+        time : int
+            Time at which the estimate was measured. Should be greater than
+            the time of the last estimate (if any).
+
+        Raises
+        ------
+        ValueError
+            If the time of the estimate is in the past relative to the last
+            added estimate or if the estimate shape mismatches.
+        """
         if self.start_time == -1:
             self.start_time = time
             self._state_dim = estimate.shape[0]
@@ -305,15 +330,44 @@ class Track:
         self.estimates.append(estimate)
 
     def estimate_at(self, time: int) -> StateVector | None:
+        """Return the estimate at time `time`.
+
+        Parameters
+        ----------
+        time : int
+
+        Returns
+        -------
+        StateVector or None
+            If an estimate at time `time` for this track exists, it will be returned.
+            Otherwise None.
+        """
         if self.start_time == -1 or time < self.start_time or (time - self.start_time >= len(self.estimates)):
             return None
 
         return self.estimates[time - self.start_time]
 
     def is_finished(self) -> bool:
+        """If the track is already finished.
+
+        Returns
+        -------
+        bool
+            True if the track is finished, False otherwise.
+        """
         return self.end_time != -1
 
     def finish(self, time: int) -> None:
+        """Finish the track and set `end_time` to the `time`.
+
+        If there are time steps between the last recorded estimate and `time`,
+        missing estimates (misdetections) will be created for each such time slot.
+
+        Parameters
+        ----------
+        time : int
+            Time when the track has ended.
+        """
         if self.start_time == -1:
             raise ValueError("Cannot finish the track that is not started.")
         if self.is_finished():
@@ -327,10 +381,24 @@ def extract_coordinate_from(
     coord_idx: int,
 ) -> tuple[tuple[int, int], list[list[float]]]:
     """From each estimate of each track from a list of Tracks extract the coordinate at position
-    `coord_idx`. The first tuple is the min time and the max time when estimates are found.
-    The second list contains lists of estimates for each track. The length of the outer list is
-    equal to the input list length, the inner lists contain the same number of estimates, from
-    time_min to time_max, np.nan when estimates either didn't exist or are misdetected."""
+    `coord_idx`.
+
+    Parameters
+    ----------
+    tracks : list of Track
+        A list of tracks.
+    coord_idx : int
+        The index of the coordinate that should be extracted from estimates.
+        E.g. 0 for x and 1 for y.
+
+    Returns
+    -------
+    tuple of int and int, list of lists of float
+        The first tuple is the min time and the max time when estimates are found.
+        The second list contains lists of estimates for each track. The length of the outer list is
+        equal to the input list length, the inner lists contain the same number of estimates, from
+        time_min to time_max, np.nan when estimates either didn't exist or are misdetected.
+    """
     time_min = min([t.start_time for t in tracks])
     time_max = max([t.end_time for t in tracks])
     estimates = []
