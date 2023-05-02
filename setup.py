@@ -6,6 +6,13 @@ setup(
     version="0.1",
     packages=["gmphd_fusion"],
     test_suite="tests",
+    install_requires=[
+        "matplotlib",
+        "numpy",
+        "scipy",
+        "seaborn",
+        "stonesoup",
+    ],
     url="https://github.com/mannannlegur/gmphd-fusion",
     license_files=("LICENSE",),
     author="Andrey Babushkin",
