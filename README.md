@@ -1,6 +1,8 @@
 # GM-PHD with fusion
 
-This is the code written of the GM-PHD filter with support for external information fusion. This implementation is the part of my Master's thesis. The module is written in Python 3.10. The experiments were held using the Jupyter notebook.
+This is the code written of the GM-PHD filter with support for external information fusion.
+This implementation is the part of my Master's thesis ([pdf](https://dspace.cvut.cz/handle/10467/108965?locale-attribute=en), [LaTeX source code](https://github.com/mannannlegur/gmphd-fusion-thesis)).
+The module is written in Python 3.10. The experiments were held using the Jupyter notebook.
 
 ## Install
 
